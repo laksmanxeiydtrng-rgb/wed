@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>อร่อยไม่ซ้ำจำสูตรไม่ได้</title>
+
+<style>
+body{
+    margin:0;
+    font-family: Arial, sans-serif;
+    background:#f5f5f5;
+}
+
+/* ===== แถบเมนูด้านบน ===== */
+.navbar{
+    display:flex;
+    align-items:center;
+    background:#222;
+    padding:0 20px;
+}
+
+.navbar h1{
+    color:#ff9800;
+    margin-right:30px;
+    font-size:22px;
+}
+
+.navbar button{
+    background:none;
+    border:none;
+    color:white;
+    padding:15px 20px;
+    cursor:pointer;
+    font-size:16px;
+}
+
+.navbar button:hover{
+    background:#444;
+}
+
+/* ===== แบนเนอร์ ===== */
+.banner{
+    /* Fallback color/gradient if the image file is missing or path is wrong */
+    background-color:#4a2c1d;
+    background-image: linear-gradient(135deg, rgba(0,0,0,0.35), rgba(0,0,0,0.1)), url("xs.png");
+    background-size: cover;
+    background-position: center;
+    height:400px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+
+    color:white;
+    text-shadow:2px 2px 5px black;
+}
+
+/* ===== เนื้อหาเมนู ===== */
+.content{
+    max-width:900px;
+    margin:30px auto;
+    background:white;
+    padding:25px;
+    border-radius:10px;
+}
+
+.menu-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap:15px;
+}
+
+.menu-item{
+    background:#fafafa;
+    border:1px solid #ddd;
+    padding:15px;
+    border-radius:8px;
+    position:relative;
+}
+/* รูปภาพในเมนู */
+.menu-item .img-wrap{
+    width:100%;
+    height:140px;
+    background:#eee;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+    overflow:hidden;
+    margin-bottom:10px;
+    position:relative;
+}
+.img-edit-overlay{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,0.6);color:white;padding:6px 8px;border-radius:6px;font-size:13px;cursor:pointer}
+.menu-item .img-wrap.drag-over{outline:3px dashed rgba(0,150,136,0.6)}
+.img-drop-hint{position:absolute;left:8px;top:8px;background:rgba(0,0,0,0.5);color:white;padding:4px 8px;border-radius:4px;font-size:12px;display:none}
+.img-wrap.allow-drop .img-drop-hint{display:block}
+.menu-item .img-wrap img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+.menu-item .title{font-weight:600; margin-bottom:6px}
+.menu-item .edit-btn{background:#ff9800;border:none;color:white;padding:6px 10px;border-radius:6px;cursor:pointer}
+
+/* โมดัลสำหรับแก้ไขรูป */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
+.modal .box{background:white;padding:16px;border-radius:8px;max-width:420px;width:100%}
+.modal .row{margin-bottom:10px}
+.modal input[type="text"]{width:100%;padding:8px;border:1px solid #ccc;border-radius:4px}
+.modal .actions{text-align:right}
+.modal .actions button{margin-left:8px}
+</style>
+</head>
+
+<body>
+
+<!-- แถบเมนู -->
+<div class="navbar">
+    <h1>อร่อยไม่ซ้ำจำสูตรไม่ได้</h1>
+    <button onclick="showMenu('curry')">แกง</button>
+    <button onclick="showMenu('noodle')">อาหารเส้น</button>
+    <button onclick="showMenu('drink')">เครื่องดื่ม</button>
+    <button onclick="showMenu('dessert')">ขนม</button>
+    <button onclick="showMenu('more')">เพิ่มเติม</button>
+    <!-- โหมดเขียนโค้ด ถูกลบออก เพื่อปิดการแก้ไขจากหน้าเว็บ -->
+</div>
+
+<!-- แบนเนอร์ -->
+<div class="banner">
+    <h2>ร้านอาหารรสจัดจ้าน</h2>
+    <p>เลือกเมนูที่คุณชอบได้เลย</p>
+</div>
+
+<!-- เนื้อหา -->
+<div class="content" id="content">
+    <h2>ยินดีต้อนรับ</h2>
+    <p>กรุณาเลือกหมวดหมู่เมนูจากแถบด้านบน</p>
+</div>
+
+<!-- โมดัลแก้ไขรูปภาพ -->
+<div id="imageModal" class="modal" role="dialog" aria-hidden="true">
+    <div class="box">
+        <h3>แก้ไขรูปเมนู</h3>
+        <div class="row">
+            <label>อัปโหลดจากเครื่อง</label>
+            <input id="imgFile" type="file" accept="image/*">
+        </div>
+        <div class="row">
+            <label>หรือวางลิงก์รูปภาพ</label>
+            <input id="imgUrl" type="text" placeholder="https://...">
+        </div>
+        <div class="actions">
+            <button onclick="closeImageEditor()">ยกเลิก</button>
+            <button id="saveImgBtn">บันทึก</button>
+        </div>
+    </div>
+</div>
+
+<!-- โมดัลแสดงรายละเอียดเมนู -->
+<div id="detailModal" class="modal" role="dialog" aria-hidden="true">
+    <div class="box">
+        <h3 id="detailTitle">รายละเอียดเมนู</h3>
+        <div style="margin-bottom:12px">
+            <div style="width:100%;height:200px;background:#eee;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:6px" id="detailImgWrap"></div>
+        </div>
+        <div class="actions">
+            <button onclick="closeDetailModal()">ปิด</button>
+            <button id="detailChangeBtn">เปลี่ยนรูป</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const menuData = {
+    curry: ["แกงเขียวหวานไก่","แกงแดงหมู","แกงป่า","พะแนงเนื้อ"],
+    noodle: ["ผัดไทย","ก๋วยเตี๋ยวต้มยำ","ผัดซีอิ๊ว","ราดหน้า"],
+    drink: ["ชาเย็น","กาแฟเย็น","น้ำมะนาว","น้ำอัดลม"],
+    dessert: ["ข้าวเหนียวมะม่วง","ลอดช่อง","บัวลอย","ไอศกรีม"]
+};
+
+let currentType = 'curry';
+
+function showMenu(type){
+    currentType = type;
+    renderMenu(type);
+}
+
+function renderMenu(type){
+    const c = document.getElementById("content");
+    // Special panel for 'more' (เพิ่มเติม)
+    if(type === 'more'){
+        const contactHtml = `
+            <h2>เพิ่มเติม</h2>
+            <div style="padding:12px">
+                <p>ช่องทางการติดต่อ:</p>
+                <ul>
+                    <li>Facebook: <a href="https://facebook.com/yourpage" target="_blank">facebook.com/yourpage</a></li>
+                    <li>TikTok: <a href="https://www.tiktok.com/@hadiscx" target="_blank">tiktok.com/@hadiscx</a></li>
+                    <li>YouTube: <a href="https://www.youtube.com/@hadisch" target="_blank">youtube.com/hadisch</a></li>
+                    <li>เบอร์ติดต่อ: 012-345-6789</li>
+                </ul>
+            </div>`;
+        c.innerHTML = contactHtml;
+        return;
+    }
+    const items = menuData[type] || [];
+    const editEnabled = isCodeEditMode();
+    let html = `<h2>${type === 'curry' ? '🍛 เมนูแกง' : type === 'noodle' ? '🍜 อาหารเส้น' : type === 'drink' ? '🥤 เครื่องดื่ม' : '🍰 ขนม'}</h2>`;
+    html += '<div class="menu-grid">';
+    items.forEach((name, idx) => {
+        const key = `menuimg_${type}_${idx}`;
+        const saved = localStorage.getItem(key);
+        const imgTag = saved ? `<img src="${saved}" alt="${name}">` : `<div style="color:#999">ไม่มีรูป</div>`;
+        html += `
+            <div class="menu-item" onclick="openDetail('${type}', ${idx})">
+                <div class="img-wrap ${editEnabled ? 'allow-drop' : ''}" data-type="${type}" data-idx="${idx}" onclick="event.stopPropagation()">
+                    <div class="img-drop-hint">วางรูปที่นี่เพื่ออัปโหลด</div>
+                    ${imgTag}
+                    ${editEnabled ? `<div class="img-edit-overlay" onclick="openImageEditor('${type}', ${idx});event.stopPropagation()">เปลี่ยนรูป</div>` : ''}
+                </div>
+                <div class="title">${name}</div>
+                ${editEnabled ? `<button class="edit-btn" onclick="openImageEditor('${type}', ${idx});event.stopPropagation()">แก้ไขรูป</button>` : ''}
+            </div>`;
+    });
+    html += '</div>';
+    c.innerHTML = html;
+}
+
+let currentEdit = null; // {type, idx}
+const modal = document.getElementById('imageModal');
+const imgFile = document.getElementById('imgFile');
+const imgUrl = document.getElementById('imgUrl');
+const saveImgBtn = document.getElementById('saveImgBtn');
+
+function isCodeEditMode(){
+    // โหมดเขียนโค้ดถูกปิดถาวรบนเว็บไซต์นี้
+    return false;
+}
+
+// ฟังก์ชัน toggleCodeEdit ถูกเอาออกเพราะโหมดถูกปิดถาวร
+
+function maybeOpenEditor(type, idx){
+    if(isCodeEditMode()){
+        openImageEditor(type, idx);
+    } else {
+        // do nothing when not in code-edit mode; preserve existing images
+        return;
+    }
+}
+
+function openImageEditor(type, idx){
+    currentEdit = {type, idx};
+    imgFile.value = '';
+    imgUrl.value = '';
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden','false');
+}
+
+function closeImageEditor(){
+    currentEdit = null;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden','true');
+}
+
+saveImgBtn.addEventListener('click', ()=>{
+    if(!currentEdit) return closeImageEditor();
+    const {type, idx} = currentEdit;
+    const key = `menuimg_${type}_${idx}`;
+
+    if(imgUrl.value.trim()){
+        // Save URL directly
+        localStorage.setItem(key, imgUrl.value.trim());
+        renderMenu(type);
+        return closeImageEditor();
+    }
+
+    const file = imgFile.files[0];
+    if(file){
+        const reader = new FileReader();
+        reader.onload = function(e){
+            localStorage.setItem(key, e.target.result);
+            renderMenu(type);
+            closeImageEditor();
+        }
+        reader.readAsDataURL(file);
+        return;
+    }
+
+    // nothing selected
+    closeImageEditor();
+});
+
+// Close modal when clicking outside box
+modal.addEventListener('click', (e)=>{ if(e.target === modal) closeImageEditor(); });
+
+// Optionally show a default menu on load
+function updateCodeEditButton(){
+    // no-op: button ถูกลบและโหมดถูกปิดถาวร
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{ renderMenu('curry'); });
+
+// Detail modal logic
+const detailModal = document.getElementById('detailModal');
+const detailTitle = document.getElementById('detailTitle');
+const detailImgWrap = document.getElementById('detailImgWrap');
+const detailChangeBtn = document.getElementById('detailChangeBtn');
+let detailCurrent = null;
+
+function openDetail(type, idx){
+    detailCurrent = {type, idx};
+    const key = `menuimg_${type}_${idx}`;
+    const saved = localStorage.getItem(key);
+    detailTitle.textContent = menuData[type][idx] || 'รายละเอียดเมนู';
+    detailImgWrap.innerHTML = saved ? `<img src="${saved}" style="width:100%;height:100%;object-fit:cover">` : '<div style="color:#999">ไม่มีรูป</div>';
+    // show or hide the Change button depending on code-edit mode
+    detailChangeBtn.style.display = isCodeEditMode() ? 'inline-block' : 'none';
+    detailModal.style.display = 'flex';
+    detailModal.setAttribute('aria-hidden','false');
+}
+
+function closeDetailModal(){
+    detailCurrent = null;
+    detailModal.style.display = 'none';
+    detailModal.setAttribute('aria-hidden','true');
+}
+
+detailChangeBtn.addEventListener('click', ()=>{
+    if(!detailCurrent) return; 
+    openImageEditor(detailCurrent.type, parseInt(detailCurrent.idx,10));
+    closeDetailModal();
+});
+
+// allow closing detail modal by clicking outside
+detailModal.addEventListener('click', (e)=>{ if(e.target === detailModal) closeDetailModal(); });
+
+// Drag-and-drop support: allow dropping image files or image URLs onto a .img-wrap when code-edit mode is on
+document.addEventListener('dragover', (e)=>{
+    const wrap = e.target.closest && e.target.closest('.img-wrap');
+    if(wrap && isCodeEditMode()){
+        e.preventDefault();
+        wrap.classList.add('drag-over');
+    }
+});
+document.addEventListener('dragleave', (e)=>{
+    const wrap = e.target.closest && e.target.closest('.img-wrap');
+    if(wrap) wrap.classList.remove('drag-over');
+});
+document.addEventListener('drop', (e)=>{
+    const wrap = e.target.closest && e.target.closest('.img-wrap');
+    if(!wrap) return;
+    wrap.classList.remove('drag-over');
+    if(!isCodeEditMode()) return;
+    e.preventDefault();
+    const type = wrap.dataset.type;
+    const idx = wrap.dataset.idx;
+    const key = `menuimg_${type}_${idx}`;
+
+    // files
+    const dt = e.dataTransfer;
+    if(dt && dt.files && dt.files.length){
+        const file = dt.files[0];
+        if(file.type && file.type.startsWith('image/')){
+            const reader = new FileReader();
+            reader.onload = function(ev){
+                localStorage.setItem(key, ev.target.result);
+                renderMenu(type);
+            }
+            reader.readAsDataURL(file);
+            return;
+        }
+    }
+
+    // text / url fallback
+    const text = (dt && (dt.getData && (dt.getData('text/plain') || dt.getData('text'))) ) || '';
+    if(text && (text.startsWith('http://') || text.startsWith('https://'))){
+        localStorage.setItem(key, text);
+        renderMenu(type);
+    }
+});
+
+</script>
+
+</body>
+</html>
